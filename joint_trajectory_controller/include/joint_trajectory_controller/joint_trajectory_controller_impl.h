@@ -360,6 +360,7 @@ update(const ros::Time& time, const ros::Duration& period)
   Trajectory& curr_traj = *curr_traj_ptr;
 
   // Update time data
+  ros::Duration last_period = time_data_.readFromRT()->period;
   TimeData time_data;
   time_data.time   = time;                                     // Cache current time
   time_data.period = period;                                   // Cache current control period
@@ -384,10 +385,35 @@ update(const ros::Time& time, const ros::Duration& period)
     typename TrajectoryPerJoint::const_iterator segment_it = sample(curr_traj[i], time_data.uptime.toSec(), desired_joint_state_);
     if (curr_traj[i].end() == segment_it)
     {
-      // Non-realtime safe, but should never happen under normal operation
-      ROS_ERROR_NAMED(name_,
+
+      // Based on https://github.com/ros-controls/ros_controllers/issues/143#issuecomment-153405903
+
+      ROS_WARN_NAMED(name_,
                       "Unexpected error: No trajectory defined at current time. Please contact the package maintainer.");
-      return;
+
+      double delta_start_time = curr_traj[i].front().startTime() - time_data.uptime.toSec();
+      double delta_period = (last_period - period).toSec();
+
+      if (curr_traj[i].empty())
+      {
+        // Non-realtime safe, but should never happen under normal operation
+        ROS_ERROR_NAMED(name_, "Trajectory is empty! Unable to recover!");
+        return;
+      }
+      else if (delta_start_time > delta_period)
+      {
+        // Non-realtime safe, but should never happen under normal operation
+        ROS_ERROR_STREAM_NAMED(name_,
+                               "Trajectory starts too far in the future! Unable to recover!\tHow far in future: "
+                               << delta_start_time << "\tAllowable future start time (dPeriod): " << delta_period);
+          return;
+      }
+      else
+      {
+        ROS_WARN_STREAM_NAMED(name_, "Recovering from error by allowing future start time\tHow far in future: "
+                              << delta_start_time << "\tAllowable future start time (dPeriod): " << delta_period);
+        segment_it = curr_traj[i].begin();
+      }
     }
     desired_state_.position[i] = desired_joint_state_.position[0];
     desired_state_.velocity[i] = desired_joint_state_.velocity[0];
