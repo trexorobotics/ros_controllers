@@ -87,8 +87,12 @@ if(CATKIN_ENABLE_TESTING)
   add_executable(rrbot_wrapping test/rrbot_wrapping.cpp)
   target_link_libraries(rrbot_wrapping ${catkin_LIBRARIES})
 
+  add_executable(rrbot_timing test/rrbot_timing.cpp)
+  target_link_libraries(rrbot_timing ${catkin_LIBRARIES})
+
   add_dependencies(tests rrbot)
   add_dependencies(tests rrbot_wrapping)
+  add_dependencies(tests rrbot_timing)
   add_dependencies(tests ${PROJECT_NAME})
 
   add_rostest_gtest(joint_trajectory_controller_test
@@ -111,6 +115,11 @@ if(CATKIN_ENABLE_TESTING)
                     test/joint_trajectory_controller_wrapping.test
                     test/joint_trajectory_controller_wrapping_test.cpp)
   target_link_libraries(joint_trajectory_controller_wrapping_test ${catkin_LIBRARIES})
+
+  add_rostest_gtest(joint_trajectory_controller_timing_test
+                    test/joint_trajectory_controller_timing.test
+                    test/joint_trajectory_controller_timing_test.cpp)
+  target_link_libraries(joint_trajectory_controller_timing_test ${catkin_LIBRARIES})
 
 endif()
 
